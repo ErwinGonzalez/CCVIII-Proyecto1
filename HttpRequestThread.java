@@ -1,4 +1,7 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -24,7 +27,7 @@ class HttpRequestThread implements Runnable {
 
         try {
             /**Importante: No agregar el "http://" al url */
-            sendGet("www.galileo.edu");
+            sendGet("galileo.edu");
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -37,9 +40,16 @@ class HttpRequestThread implements Runnable {
         */
         Socket socket = new Socket(url ,80);
         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-        out.write("GET / HTTP/1.0\r\n\r\n".getBytes());
-        out.flush();
+        PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))); 
+        out.println("GET / HTTP/1.1"); 
+        out.println("Host: "+url);
+        out.println("Accept: */*");
+        out.println("Connection: keep-alive");
+        out.println("User-Agent: Mozilla/5.0\r\n\r\n");
+         
+        out.flush(); 
+        
+        
         /*Este codigo iria dentro del loop, para buscar las respuestas
          * De obtener un 301 0 302 hay que buscar como manejar el redirect
          */
@@ -50,13 +60,12 @@ class HttpRequestThread implements Runnable {
          */
         boolean more_data = true;
         String str;
-        while(more_data){
-                str = in.readLine();
-            if(str==null)
-                more_data = false;
-            System.out.println(str);
+        while((str= in.readLine())!=null){
+                
+                System.out.println(str);
+               
         }
-
+        socket.close();
        /**Una vez que se tenga el resultado, hay que usar jsoup para crear una lista de tags
         * leer por bloques para poder dar forma al arbol
         * ej.

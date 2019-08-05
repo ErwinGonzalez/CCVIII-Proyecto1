@@ -10,7 +10,7 @@ class ServerMain {
         String readLine = readFile.readLine();
         String[] maxThreadsConf = readLine.split("=");
         int maxThreadsNumber = 0;
-
+        //TODO el programa no termina, averiguar porque
 
         if(maxThreadsConf.length == 2 && maxThreadsConf[0].equals("MaxThreads")){
             try{
@@ -23,10 +23,16 @@ class ServerMain {
         }
 
         ThreadPoolExecutor tpe = (ThreadPoolExecutor) Executors.newFixedThreadPool(maxThreadsNumber);
-        while (true){
+        /** TODO temporalmente deshabilitar el while, causa que se llame siempre el mismo thread,
+         * arreglar luego
+        */
+        //while (true){
             /*ServerThread thread = new ServerThread(serverSocket.accept());
             tpe.submit(thread);*/
             tpe.submit(new HttpRequestThread());
-        }
+        //}
+        readFile.close();
+        serverSocket.close();
+
     }
 }
