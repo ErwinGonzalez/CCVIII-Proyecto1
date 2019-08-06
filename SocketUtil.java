@@ -17,7 +17,11 @@ class SocketUtil{
     ArrayList<String> fullReadMessage;
     String headerSeparator = "\r\n\r\n";
     boolean headerComplete = false;
+    String domain;
+    String page;
+    int port;
     public SocketUtil(String url, int port){
+        this.port = port;
         try{
             //TODO check if the URL is trying to access a page other than the index, split host and page
             socket = new Socket(url,port);
@@ -32,12 +36,26 @@ class SocketUtil{
         fullReadMessage = new ArrayList<>();
     }
 
-    public void sendGet(String getMessage)throws IOException {
-        socketOutputStream.println(getMessage);
+    public void sendGet(String domain, String page)throws IOException {
+        this.domain = domain;
+        this.page = page;
+        String message = "GET "+page+" HTTP/1.0\r\n"+
+                         "Host: "+domain+"\r\n"+
+                         "Accept: */*\r\n"+
+                         "Connection: keep-alive\r\n"+
+                         "User-Agent: Mozilla/5.0\r\n";
+        socketOutputStream.println(message);
         socketOutputStream.println(headerSeparator);     
         socketOutputStream.flush();
-        if(getResponseCode() == 301)
+        int responseCode = getResponseCode();
+        if(responseCode == 301 || responseCode == 302)
             getForwardAddress();
+
+            
+
+            for(String line: fullReadMessage)        {
+                System.out.println(line);
+            }
     }
 
     public String readOneLine() throws IOException{
@@ -67,7 +85,29 @@ class SocketUtil{
                 readOneLine();
             requestLine = lastReadMessage.split(" ");
         }
+        String[] redirectPage = requestLine[1].split("/");
         System.out.println(requestLine[1]);
+        for(String part: redirectPage)
+            System.out.println(part);
+
+        /*if(redirectPage.length == 4)
+            this.page = redirectPage[3];
+        this.domain = redirectPage[2];*/
+
+        try{
+            socket = new Socket(redirectPage[2],port);
+            socketInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            socketOutputStream = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))); 
+        }catch(UnknownHostException uhe){
+            uhe.printStackTrace();
+        }
+        catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+        fullReadMessage = new ArrayList<>();
+        //TODO get the correct path, splitting on "/" seems not appropiate
+        sendGet(redirectPage[2],"/"+redirectPage[3]+"/");
+        
         //TODO make the new GET request
     }
     

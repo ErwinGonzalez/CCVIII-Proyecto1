@@ -27,7 +27,7 @@ class HttpRequestThread implements Runnable {
 
         try {
             /**Importante: No agregar el "http://" al url */
-            sendGet("galileo.edu");
+            sendGet("www.galileo.edu");
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -43,16 +43,13 @@ class HttpRequestThread implements Runnable {
          * hay que separar el url de domino de la pagina 
          * y cambiar la estructura del get*/
         String page = "/fisicc";
-        String message = "GET "+page+" HTTP/1.0\r\n"+
-                         "Host: "+url+"\r\n"+
-                         "Accept: */*\r\n"+
-                         "Connection: keep-alive\r\n"+
-                         "User-Agent: Mozilla/5.0\r\n";
+
+        
         SocketUtil socketUtil = new SocketUtil(url,80);
-        socketUtil.sendGet(message);
+        socketUtil.sendGet(url, page);
         String str;
-        //while((str = socketUtil.readOneLine())!=null)
-            //System.out.println(str);
+        while((str = socketUtil.readOneLine())!=null)
+            System.out.println(str);
             
         //System.out.println(socketUtil.isResponse200());
         /*Socket socket = new Socket(url ,80);
