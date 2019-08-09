@@ -28,13 +28,14 @@ class SocketUtil {
     public void sendGet(String url) throws IOException {
         this.domain = getDomain(url);
         this.page = getSite(url);
-        System.out.println("domain "+domain+"site "+page);
+        //System.out.println("domain "+domain+"site "+page);
         String message = "GET " + page + " HTTP/1.1\r\n" + "Host: " + domain + "\r\n" + "Accept: */*\r\n"
                 + "Connection: keep-alive\r\n" + "User-Agent: Mozilla/5.0\r\n";
         socketOutputStream.println(message);
         socketOutputStream.println(headerSeparator);
         socketOutputStream.flush();
         int responseCode = getResponseCode();
+        System.out.println(responseCode);
         if (responseCode == 301 || responseCode == 302)
             getForwardAddress();
 
@@ -50,6 +51,13 @@ class SocketUtil {
             return null;
         }
 
+    }
+
+    public String readLineIfNotEmpty() throws IOException{
+        if(socketInputStream.ready())
+           return  readOneLine();
+        else    
+            return null;
     }
 
     public int getResponseCode() throws IOException {

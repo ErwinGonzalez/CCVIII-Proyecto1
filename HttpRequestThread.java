@@ -1,4 +1,5 @@
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 class HttpRequestThread implements Runnable {
@@ -19,7 +20,7 @@ class HttpRequestThread implements Runnable {
 
         try {
 
-            sendGet("www.galileo.edu/fisicc/");
+            sendGet("www.google.com");
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -37,10 +38,12 @@ class HttpRequestThread implements Runnable {
         SocketUtil socketUtil = new SocketUtil(url, 80);
         socketUtil.sendGet(url);
         String str;
-        while ((str = socketUtil.readOneLine()) != null)
+        ArrayList<String> list = new ArrayList<>();
+        while ((str = socketUtil.readLineIfNotEmpty()) != null){
             //TODO esta leyendo un 0/null de mas
-            System.out.println(str);
-
+           System.out.println(str);
+        }
+        System.out.println("hellp");
         // System.out.println(socketUtil.isResponse200());
         /*
          * Socket socket = new Socket(url ,80); BufferedReader in = new
