@@ -29,6 +29,7 @@ class ServerMain {
         //while (true){
             /*ServerThread thread = new ServerThread(serverSocket.accept());
             tpe.submit(thread);*/
+            //TODO aqui se podria mandar a llamar la thread con un socket, asi en el url va el parametro a buscar
             tpe.submit(new HttpRequestThread());
         //}
         readFile.close();

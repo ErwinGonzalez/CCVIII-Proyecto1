@@ -1,6 +1,11 @@
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.helper.Validate;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 class HttpRequestThread implements Runnable {
 
@@ -20,7 +25,7 @@ class HttpRequestThread implements Runnable {
 
         try {
 
-            sendGet("www.google.com");
+            sendGet("www.galileo.edu");
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -34,17 +39,23 @@ class HttpRequestThread implements Runnable {
          * (OK), 301 (Moved Temporarily) o 302(Moved Permantentely)
          */
 
-
         SocketUtil socketUtil = new SocketUtil(url, 80);
         socketUtil.sendGet(url);
         String str;
         ArrayList<String> list = new ArrayList<>();
-        while ((str = socketUtil.readLineIfNotEmpty()) != null){
-            //TODO esta leyendo un 0/null de mas
-           System.out.println(str);
+        String htmlRead = "";
+
+        while ((str = socketUtil.readLineIfNotEmpty()) != null) {
+            // TODO esta leyendo un 0/null de mas
+            // System.out.println(str);
+            htmlRead += str + "\n";
         }
-        System.out.println("hellp");
-        // System.out.println(socketUtil.isResponse200());
+        //TODO add other stuff a[href], and other links
+        Document doc = Jsoup.parse(htmlRead);
+        Elements links = doc.select("link");
+        for(Element link : links)
+            System.out.println(link);
+       
         /*
          * Socket socket = new Socket(url ,80); BufferedReader in = new
          * BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter
