@@ -1,16 +1,30 @@
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.logging.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.Validate;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.InputStreamReader;
+import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.logging.Logger;
+import java.io.File;
+import java.io.FileReader;
+import java.util.Date;
+
+
 
 class HttpRequestThread implements Runnable {
 
     private final static Logger logger = Logger.getLogger(ServerThread.class.getName());
     SimpleDateFormat format = new SimpleDateFormat("EEE dd/MM/yyyy hh:mm:ss z");
+    Socket serverRequest;
+    BufferedReader reader;
+    DataOutputStream output;
 
     /**
      * Este constructor, posiblemente podria recibir la pagina, en lugar de tenerla
@@ -20,12 +34,29 @@ class HttpRequestThread implements Runnable {
 
     }
 
+    public HttpRequestThread(Socket serverConnection) {
+        try {
+            this.serverRequest = serverConnection;
+            this.reader = new BufferedReader(new InputStreamReader(serverRequest.getInputStream()));
+            this.output = new DataOutputStream(serverRequest.getOutputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void run() {
 
         try {
+            String request = "";
+            request = reader.readLine();
 
-            sendGet("www.galileo.edu");
+            if (request != null && !request.isEmpty()) {
+                // System.out.println(request);
+                String[] requestType = request.split(" ");
+                sendGet(requestType[1].substring(1));
+            }
+
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -50,12 +81,26 @@ class HttpRequestThread implements Runnable {
             // System.out.println(str);
             htmlRead += str + "\n";
         }
-        //TODO add other stuff a[href], and other links
+
+        // TODO add other stuff a[href], and other links
         Document doc = Jsoup.parse(htmlRead);
         Elements links = doc.select("link");
-        for(Element link : links)
-            System.out.println(link);
-       
+        String returnString = "<html><body>";
+
+        for (Element link : links)
+            list.add("<a href=http://localhost:2407/"+link.attr("href")+">"+link.attr("href")+"</a>");
+            // System.out.println(link);
+            //returnString += "<a href="+link.attr("href")+">"+link.attr("href")+"</a><br>\n";
+        IndexItem item = new IndexItem(doc.title(),url,list,"");
+        returnString += item.formattedHTML()+"</body></html>";
+
+        String headerResponse = "HTTP/1.1 200 OK" + "Server : TestServer\n" + "Date: "
+                + format.format(new Date(System.currentTimeMillis())) + "\n" + "Content-Type: text/html" + "\n"
+                + "Connection: keep-alive\n" + "Content-Length: " + returnString.length() + "\r\n";
+
+        output.writeBytes(headerResponse);
+        output.writeBytes("\r\n");
+        output.writeBytes(returnString);
         /*
          * Socket socket = new Socket(url ,80); BufferedReader in = new
          * BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter
@@ -102,5 +147,29 @@ class HttpRequestThread implements Runnable {
          * * * * * Arbol * Pagina Web * * * ************************ * Metadata *
          ***********************************
          */
+    }
+    class IndexItem {
+        String name;
+        String url;
+        ArrayList<String> childrenLinks;
+        String metadata;
+        IndexItem(String name, String url, ArrayList<String> childrenLinks, String metadata){
+            this.name = name;
+            this.url = url;
+            this.childrenLinks = childrenLinks;
+            this.metadata = metadata;
+        }
+        public String formattedHTML(){
+            String result =  "<ul>" +
+                    "<li>"+this.name+"</li>"+
+                    "<li>"+this.url+"</li>"+
+                    "<ul>";
+            for(String link:childrenLinks)
+                result +="<li>"+link+"</li>";
+            result +="</ul>"
+                    +"<li>"+this.metadata+"</li>";
+
+            return result;
+        }
     }
 }

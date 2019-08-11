@@ -23,17 +23,10 @@ class ServerMain {
         }
 
         ThreadPoolExecutor tpe = (ThreadPoolExecutor) Executors.newFixedThreadPool(maxThreadsNumber);
-        /** TODO temporalmente deshabilitar el while, causa que se llame siempre el mismo thread,
-         * arreglar luego
-        */
-        //while (true){
-            /*ServerThread thread = new ServerThread(serverSocket.accept());
-            tpe.submit(thread);*/
-            //TODO aqui se podria mandar a llamar la thread con un socket, asi en el url va el parametro a buscar
-            tpe.submit(new HttpRequestThread());
-        //}
-        readFile.close();
-        serverSocket.close();
-
+      
+        while (true){
+            //se llama a esta pagina como http://localhost:2407/${url}
+            tpe.submit(new HttpRequestThread(serverSocket.accept()));
+        }
     }
 }
