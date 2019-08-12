@@ -86,7 +86,8 @@ class HttpRequestThread implements Runnable {
          * cada respuesta nos interesa encontrar las respuestas que nos den codigo 200
          * (OK), 301 (Moved Temporarily) o 302(Moved Permantentely)
          */
-    //Open Ports checker
+        /**Port Searching starts here
+        * */
         int portNumber = 78;
         int portMaxNumber = 83;
 
@@ -110,17 +111,19 @@ class HttpRequestThread implements Runnable {
         }
         System.out.println(openPorts.toString());
 
-        //
+        /** Port Searching end Here
+        * */
 
+        /**Starts socket and gets page from port obtained before*/
         SocketUtil socketUtil = new SocketUtil(urlString, portNumber);
         socketUtil.sendGet(url);
         String str;
+        //Arraylist para guardar los elementos leidos de jsoup
         ArrayList<String> list = new ArrayList<>();
+        // string para guardar el html que devuelve el socket
         String htmlRead = "";
-
         while ((str = socketUtil.readLineIfNotEmpty()) != null) {
             // TODO esta leyendo un 0/null de mas
-            // System.out.println(str);
             htmlRead += str + "\n";
         }
 
@@ -130,8 +133,11 @@ class HttpRequestThread implements Runnable {
         //TODO button might need to display text or smthng
         Elements btnlinks = doc.getElementsByTag("button");
         Elements formlinks = doc.getElementsByTag("action");
+        //starts html response
         String returnString = "<html><body>";
 
+        /**Get links and other stuff, add them to the list*/
+        //TODO manage list better, still has to do recursion
         for (Element link : alinks)
             list.add("<a href=http://localhost:2407/"+link.attr("href")+"> a[href]"+link.attr("href")+"</a>");
             // System.out.println(link);
@@ -140,37 +146,20 @@ class HttpRequestThread implements Runnable {
             list.add("<a href=http://localhost:2407/"+link.attr("onClick")+"> btn[onClick]"+link.attr("onClick")+"</a>");
         for (Element link : formlinks)
             list.add("<a href=http://localhost:2407/"+link.attr("action")+"> form[action]"+link.attr("action")+"</a>");
-
+        //creates data structure
         IndexItem item = new IndexItem(doc.title(),url,list,"");
+        //Closes html response code
         returnString += item.formattedHTML()+"</body></html>";
 
         String headerResponse = "HTTP/1.1 200 OK" + "Server : TestServer\n" + "Date: "
                 + format.format(new Date(System.currentTimeMillis())) + "\n" + "Content-Type: text/html" + "\n"
-                + "Connection: keep-alive\n" + "Content-Length: " + returnString.length() + "\r\n";
+                + "Connection: keep-alive\n" + "Content-Length: " + returnString.length() + "\r\n\r\n";
 
         output.writeBytes(headerResponse);
-        output.writeBytes("\r\n");
         output.writeBytes(returnString);
-        /*
-         * Socket socket = new Socket(url ,80); BufferedReader in = new
-         * BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter
-         * out = new PrintWriter(new BufferedWriter(new
-         * OutputStreamWriter(socket.getOutputStream()))); out.println(message);
-         * out.println("\r\n\r\n");
-         * 
-         * out.flush(); String str; while((str= in.readLine())!=null){
-         * 
-         * System.out.println(str);
-         * 
-         * } socket.close();
-         */
 
-        /*
-         * TODO Este codigo iria dentro del loop, para buscar las respuestas De obtener
-         * un 301 0 302 hay que buscar como manejar el redirect
-         */
 
-        /*
+        /**
          * Ciclo de lectura del input de la pagina, hay que mejorarlo posiblemente seria
          * buena idea guardar este resultado en un archivo (ej. temp.txt) para tener
          * donde leer/manipular el resultado
