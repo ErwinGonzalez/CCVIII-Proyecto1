@@ -92,7 +92,11 @@ class SocketUtil {
          */
 
         // TODO get the correct path, splitting on "/" seems not appropiate
-        resetSocket(getDomain(requestLine[1]), port);
+        String getDomain = getDomain(requestLine[1]);
+        String website = this.domain, portStr="80";
+
+
+        resetSocket(website, Integer.valueOf(portStr));
      
         // System.out.println(requestLine[1]);
         // System.out.println(site+"\n"+getDomain(site)+"\n"+getSite(site));

@@ -8,7 +8,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -62,6 +64,21 @@ class HttpRequestThread implements Runnable {
         }
     }
 
+    private boolean isPortOpen(String url,int port){
+        Socket s = new Socket();
+        try{
+            //timeout para no esperar al timeout standar
+            s.connect(new InetSocketAddress(url,port),3000);
+            return true;
+        }catch(Exception e){
+            return false;
+        }finally {
+            if(s!=null){
+                try{s.close();}
+                catch (Exception e){}
+            }
+        }
+    }
     private void sendGet(String url) throws Exception {
 
         /*
@@ -69,8 +86,33 @@ class HttpRequestThread implements Runnable {
          * cada respuesta nos interesa encontrar las respuestas que nos den codigo 200
          * (OK), 301 (Moved Temporarily) o 302(Moved Permantentely)
          */
+    //Open Ports checker
+        int portNumber = 78;
+        int portMaxNumber = 83;
 
-        SocketUtil socketUtil = new SocketUtil(url, 80);
+        String urlString = url;
+        if (urlString.contains("http://"))
+            urlString = urlString.replace("http://", "");
+        if (url.contains("https://"))
+            urlString = urlString.replace("https://", "");
+        //urlString = urlString.contains("/") ? urlString.substring(0, urlString.indexOf("/")):urlString;
+        boolean portOpen = false;
+
+        System.out.println(urlString);
+        ArrayList<Integer> openPorts = new ArrayList<>();
+        for(int port = portNumber;port<=portMaxNumber;port++) {
+            if(isPortOpen(urlString,port) && !portOpen) {
+                portOpen = true;
+                portNumber = port;
+                openPorts.add(portNumber);
+            }
+           // System.out.println("isPortOpen: "+portOpen+" portNumber: "+port);
+        }
+        System.out.println(openPorts.toString());
+
+        //
+
+        SocketUtil socketUtil = new SocketUtil(urlString, portNumber);
         socketUtil.sendGet(url);
         String str;
         ArrayList<String> list = new ArrayList<>();
@@ -84,13 +126,21 @@ class HttpRequestThread implements Runnable {
 
         // TODO add other stuff a[href], and other links
         Document doc = Jsoup.parse(htmlRead);
-        Elements links = doc.select("link");
+        Elements alinks = doc.select("a[href]");
+        //TODO button might need to display text or smthng
+        Elements btnlinks = doc.getElementsByTag("button");
+        Elements formlinks = doc.getElementsByTag("action");
         String returnString = "<html><body>";
 
-        for (Element link : links)
-            list.add("<a href=http://localhost:2407/"+link.attr("href")+">"+link.attr("href")+"</a>");
+        for (Element link : alinks)
+            list.add("<a href=http://localhost:2407/"+link.attr("href")+"> a[href]"+link.attr("href")+"</a>");
             // System.out.println(link);
             //returnString += "<a href="+link.attr("href")+">"+link.attr("href")+"</a><br>\n";
+        for (Element link : btnlinks)
+            list.add("<a href=http://localhost:2407/"+link.attr("onClick")+"> btn[onClick]"+link.attr("onClick")+"</a>");
+        for (Element link : formlinks)
+            list.add("<a href=http://localhost:2407/"+link.attr("action")+"> form[action]"+link.attr("action")+"</a>");
+
         IndexItem item = new IndexItem(doc.title(),url,list,"");
         returnString += item.formattedHTML()+"</body></html>";
 
