@@ -4,6 +4,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ class SocketUtil {
     String domain;
     String page;
     int port;
+    static int retries = 3;
 
     public SocketUtil(String url, int port) throws IOException {
         this.port = port;
@@ -91,16 +93,20 @@ class SocketUtil {
          * redirectPage[2];
          */
 
-        // TODO get the correct path, splitting on "/" seems not appropiate
         String getDomain = getDomain(requestLine[1]);
-        String website = this.domain, portStr="80";
+        String website = this.domain;
 
 
-        resetSocket(website, Integer.valueOf(portStr));
+        resetSocket(getDomain, this.port);
      
         // System.out.println(requestLine[1]);
         // System.out.println(site+"\n"+getDomain(site)+"\n"+getSite(site));
-        sendGet(requestLine[1]);
+        if(retries-- > 0)
+            sendGet(requestLine[1]);
+        else{
+            System.out.println("Max retries reached, exiting");
+            return;}
+
       
         // TODO make the new GET request
     }
@@ -127,7 +133,8 @@ class SocketUtil {
 
     public void resetSocket(String url, int port) throws IOException {
         try {
-            socket = new Socket(getDomain(url), port);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(getDomain(url),port));
             socketInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             socketOutputStream = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
         } catch (UnknownHostException uhe) {
@@ -149,10 +156,10 @@ class SocketUtil {
         return fullReadMessage;
     }
 
-    public void CloseSocket() throws IOException {
-        socket.close();
+    public void closeSocket() throws IOException {
         socketInputStream.close();
         socketOutputStream.close();
+        socket.close();
     }
 
 }

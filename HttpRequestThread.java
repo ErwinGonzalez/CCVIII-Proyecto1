@@ -3,6 +3,8 @@ import org.jsoup.helper.Validate;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import javax.management.InstanceNotFoundException;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -27,6 +29,10 @@ class HttpRequestThread implements Runnable {
     Socket serverRequest;
     BufferedReader reader;
     DataOutputStream output;
+    static String returnString = "<html><body>";
+    static String ogRequest = "";
+    static int linkNo = 0;
+    private static ArrayList<String> urlList = new ArrayList<>();
 
     /**
      * Este constructor, posiblemente podria recibir la pagina, en lugar de tenerla
@@ -56,7 +62,8 @@ class HttpRequestThread implements Runnable {
             if (request != null && !request.isEmpty()) {
                 // System.out.println(request);
                 String[] requestType = request.split(" ");
-                sendGet(requestType[1].substring(1));
+                ogRequest = requestType[1].substring(1);
+                sendGet(ogRequest,0, null);
             }
 
         } catch (Exception e) {
@@ -68,7 +75,7 @@ class HttpRequestThread implements Runnable {
         Socket s = new Socket();
         try{
             //timeout para no esperar al timeout standar
-            s.connect(new InetSocketAddress(url,port),3000);
+            s.connect(new InetSocketAddress(url,port));
             return true;
         }catch(Exception e){
             return false;
@@ -79,8 +86,7 @@ class HttpRequestThread implements Runnable {
             }
         }
     }
-    private void sendGet(String url) throws Exception {
-
+    private void sendGet(String url, int depth, IndexItem receivedItem) throws Exception {
         /*
          * TODO hacer un ciclo, empezar a leer los puertos, leer la primera linea de
          * cada respuesta nos interesa encontrar las respuestas que nos den codigo 200
@@ -99,27 +105,31 @@ class HttpRequestThread implements Runnable {
         //urlString = urlString.contains("/") ? urlString.substring(0, urlString.indexOf("/")):urlString;
         boolean portOpen = false;
 
-        System.out.println(urlString);
+        //System.out.println(urlString);
         ArrayList<Integer> openPorts = new ArrayList<>();
-        for(int port = portNumber;port<=portMaxNumber;port++) {
+        /*for(int port = portNumber;port<=portMaxNumber;port++) {
             if(isPortOpen(urlString,port) && !portOpen) {
                 portOpen = true;
                 portNumber = port;
                 openPorts.add(portNumber);
             }
            // System.out.println("isPortOpen: "+portOpen+" portNumber: "+port);
-        }
-        System.out.println(openPorts.toString());
+        }*/
+        //System.out.println(openPorts.toString());
+        //System.out.println("DEPTH: "+depth);
 
         /** Port Searching end Here
         * */
 
         /**Starts socket and gets page from port obtained before*/
-        SocketUtil socketUtil = new SocketUtil(urlString, portNumber);
-        socketUtil.sendGet(url);
+        SocketUtil socketUtil = new SocketUtil(urlString, 80);
+        socketUtil.sendGet(urlString);
+
+        //addUrlToList(url);
+
         String str;
         //Arraylist para guardar los elementos leidos de jsoup
-        ArrayList<String> list = new ArrayList<>();
+        ArrayList<IndexItem> list = new ArrayList<>();
         // string para guardar el html que devuelve el socket
         String htmlRead = "";
         while ((str = socketUtil.readLineIfNotEmpty()) != null) {
@@ -134,31 +144,68 @@ class HttpRequestThread implements Runnable {
         Elements btnlinks = doc.getElementsByTag("button");
         Elements formlinks = doc.getElementsByTag("action");
         //starts html response
-        String returnString = "<html><body>";
+
 
         /**Get links and other stuff, add them to the list*/
         //TODO manage list better, still has to do recursion
-        for (Element link : alinks)
-            list.add("<a href=http://localhost:2407/"+link.attr("href")+"> a[href]"+link.attr("href")+"</a>");
+        for (Element link : alinks) {
+            //System.out.println(link);
+            if(addUrlToList(link.attr("href"))
+                    && !link.attr("href").startsWith("/")
+                    && !link.attr("href").contains("twitter")
+                    && !link.attr("href").isEmpty())
+                list.add(new IndexItem("",link.attr("href"),new ArrayList<>(),""));
             // System.out.println(link);
             //returnString += "<a href="+link.attr("href")+">"+link.attr("href")+"</a><br>\n";
-        for (Element link : btnlinks)
+        }
+        //System.out.println(list.toString());
+       /* for (Element link : btnlinks)
             list.add("<a href=http://localhost:2407/"+link.attr("onClick")+"> btn[onClick]"+link.attr("onClick")+"</a>");
         for (Element link : formlinks)
             list.add("<a href=http://localhost:2407/"+link.attr("action")+"> form[action]"+link.attr("action")+"</a>");
-        //creates data structure
-        IndexItem item = new IndexItem(doc.title(),url,list,"");
+        //creates data structure*/
+
+       //TODO add loop here
+        IndexItem item = new IndexItem();
+        if(receivedItem == null){
+            item.name = doc.title();
+            item.url = url;
+            item.childrenLinks = list;
+            item.metadata = "";
+        }
+        else
+            receivedItem.childrenLinks.addAll(list);
+       // System.out.println(item);
+       // System.out.println(receivedItem);
+       // System.out.println(list.toString());
+
+        if((depth++)<3) {
+            for (IndexItem childLink : list) {
+                try {
+                    sendGet(childLink.url, depth,childLink);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+               // System.out.println(childLink);
+            }
+        }
+        socketUtil.closeSocket();
+        if(url.equals(ogRequest))
+            depth = 0;
+
         //Closes html response code
-        returnString += item.formattedHTML()+"</body></html>";
+        if(depth == 0) {
+            returnString += item.formattedHTML() + "</body></html>";
+            //System.out.println(returnString);
+            String headerResponse = "HTTP/1.1 200 OK" + "Server : TestServer\n" + "Date: "
+                    + format.format(new Date(System.currentTimeMillis())) + "\n" + "Content-Type: text/html" + "\n"
+                    + "Connection: keep-alive\n" + "Content-Length: " + returnString.length() + "\r\n\r\n";
 
-        String headerResponse = "HTTP/1.1 200 OK" + "Server : TestServer\n" + "Date: "
-                + format.format(new Date(System.currentTimeMillis())) + "\n" + "Content-Type: text/html" + "\n"
-                + "Connection: keep-alive\n" + "Content-Length: " + returnString.length() + "\r\n\r\n";
+            output.writeBytes(headerResponse);
+            output.writeBytes(returnString);
+            System.out.println(urlList);
 
-        output.writeBytes(headerResponse);
-        output.writeBytes(returnString);
-
-
+        }
         /**
          * Ciclo de lectura del input de la pagina, hay que mejorarlo posiblemente seria
          * buena idea guardar este resultado en un archivo (ej. temp.txt) para tener
@@ -186,13 +233,22 @@ class HttpRequestThread implements Runnable {
          * * * * * Arbol * Pagina Web * * * ************************ * Metadata *
          ***********************************
          */
+        return;
+    }
+    private boolean addUrlToList(String url){
+        if(!urlList.contains(url)) {
+            urlList.add(url);
+            return true;
+        }
+        return false;
     }
     class IndexItem {
         String name;
         String url;
-        ArrayList<String> childrenLinks;
+        ArrayList<IndexItem> childrenLinks;
         String metadata;
-        IndexItem(String name, String url, ArrayList<String> childrenLinks, String metadata){
+        IndexItem(){}
+        IndexItem(String name, String url, ArrayList<IndexItem> childrenLinks, String metadata){
             this.name = name;
             this.url = url;
             this.childrenLinks = childrenLinks;
@@ -203,12 +259,32 @@ class HttpRequestThread implements Runnable {
                     "<li>"+this.name+"</li>"+
                     "<li>"+this.url+"</li>"+
                     "<ul>";
-            for(String link:childrenLinks)
-                result +="<li>"+link+"</li>";
+            /*for(IndexItem link:childrenLinks) {
+                result += "<li>" + "<a href=http://localhost:2407/" + link.url + "> a[href]" + link.url + "</a>" + "</li>";
+                result += formatList(link.childrenLinks);
+            }*/
+            if(!this.childrenLinks.isEmpty())
+                result+=formatList(childrenLinks);
             result +="</ul>"
-                    +"<li>"+this.metadata+"</li>";
+                    +"<li>"+this.metadata+"</li></ul>";
 
             return result;
+        }
+        public String formatList(ArrayList<IndexItem> childList ){
+            String res = "<ul>";
+
+                for(IndexItem childItem : childList) {
+                   // System.out.println(childItem.childrenLinks+"\n\n");
+                    res+="<li>" + "<a href=http://localhost:2407/" + childItem.url + "> a[href]" + childItem.url + "</a>" + "</li>";
+                    if(childItem.childrenLinks != null)
+                       res += formatList(childItem.childrenLinks);
+                }
+            //System.out.println(res);
+            res +="</ul>";
+            return res;
+        }
+        public String toString(){
+            return "url: "+this.url +" empty: "+this.childrenLinks;
         }
     }
 }
