@@ -106,7 +106,7 @@ class HttpRequestThread implements Runnable {
         boolean portOpen = false;
 
         //System.out.println(urlString);
-        ArrayList<Integer> openPorts = new ArrayList<>();
+        //ArrayList<Integer> openPorts = new ArrayList<>();
         /*for(int port = portNumber;port<=portMaxNumber;port++) {
             if(isPortOpen(urlString,port) && !portOpen) {
                 portOpen = true;
@@ -141,23 +141,31 @@ class HttpRequestThread implements Runnable {
         Document doc = Jsoup.parse(htmlRead);
         Elements alinks = doc.select("a[href]");
         //TODO button might need to display text or smthng
-        Elements btnlinks = doc.getElementsByTag("button");
-        Elements formlinks = doc.getElementsByTag("action");
+        Elements lLinks = doc.select("link[href]");
+        //Elements btnlinks = doc.getElementsByTag("button");
+        //Elements formlinks = doc.getElementsByTag("action");
         //starts html response
-
+        alinks.addAll(lLinks);
+        //System.out.println(urlString +"\n"+ (alinks.size() > 0 )+"\n");
 
         /**Get links and other stuff, add them to the list*/
         //TODO manage list better, still has to do recursion
         for (Element link : alinks) {
             //System.out.println(link);
+            //TODO cambiar a ssl para poder llenar mejor el arbol
+            //TODO excluir otros tipos de archivos, como los .ico y los .xml, archivos que no tienen links
             if(addUrlToList(link.attr("href"))
                     && !link.attr("href").startsWith("/")
+                    && !link.attr("href").startsWith("#")
+                    && !link.attr("href").endsWith(".css")
                     && !link.attr("href").contains("twitter")
+                    && !link.attr("href").contains("oembed")
                     && !link.attr("href").isEmpty())
-                list.add(new IndexItem("",link.attr("href"),new ArrayList<>(),""));
+                list.add(new IndexItem(link.attr("href"), htmlRead,new ArrayList<>()));
             // System.out.println(link);
             //returnString += "<a href="+link.attr("href")+">"+link.attr("href")+"</a><br>\n";
         }
+        socketUtil.closeSocket();
         //System.out.println(list.toString());
        /* for (Element link : btnlinks)
             list.add("<a href=http://localhost:2407/"+link.attr("onClick")+"> btn[onClick]"+link.attr("onClick")+"</a>");
@@ -166,22 +174,20 @@ class HttpRequestThread implements Runnable {
         //creates data structure*/
 
        //TODO add loop here
-        IndexItem item = new IndexItem();
-        if(receivedItem == null){
-            item.name = doc.title();
-            item.url = url;
-            item.childrenLinks = list;
-            item.metadata = "";
-        }
-        else
-            receivedItem.childrenLinks.addAll(list);
-       // System.out.println(item);
+
+        if(receivedItem == null)
+            receivedItem = new IndexItem(url,htmlRead,new ArrayList<>());
+
+
+        receivedItem.childrenLinks.addAll(list);
+       //System.out.println(receivedItem);
        // System.out.println(receivedItem);
        // System.out.println(list.toString());
 
         if((depth++)<3) {
             for (IndexItem childLink : list) {
                 try {
+                    System.out.println(childLink.url);
                     sendGet(childLink.url, depth,childLink);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -189,13 +195,13 @@ class HttpRequestThread implements Runnable {
                // System.out.println(childLink);
             }
         }
-        socketUtil.closeSocket();
+
         if(url.equals(ogRequest))
             depth = 0;
 
         //Closes html response code
         if(depth == 0) {
-            returnString += item.formattedHTML() + "</body></html>";
+            returnString += receivedItem.formattedHTML() + "</body></html>";
             //System.out.println(returnString);
             String headerResponse = "HTTP/1.1 200 OK" + "Server : TestServer\n" + "Date: "
                     + format.format(new Date(System.currentTimeMillis())) + "\n" + "Content-Type: text/html" + "\n"
@@ -203,7 +209,7 @@ class HttpRequestThread implements Runnable {
 
             output.writeBytes(headerResponse);
             output.writeBytes(returnString);
-            System.out.println(urlList);
+            //System.out.println(urlList);
 
         }
         /**
@@ -243,30 +249,26 @@ class HttpRequestThread implements Runnable {
         return false;
     }
     class IndexItem {
-        String name;
         String url;
+        String html;
         ArrayList<IndexItem> childrenLinks;
-        String metadata;
         IndexItem(){}
-        IndexItem(String name, String url, ArrayList<IndexItem> childrenLinks, String metadata){
-            this.name = name;
+        IndexItem(String url, String html, ArrayList<IndexItem> childrenLinks){
             this.url = url;
+            this.html = html;
             this.childrenLinks = childrenLinks;
-            this.metadata = metadata;
         }
         public String formattedHTML(){
-            String result =  "<ul>" +
-                    "<li>"+this.name+"</li>"+
-                    "<li>"+this.url+"</li>"+
-                    "<ul>";
+            String result =  "<ul>"+
+                    "<li>"+this.url+"</li>";
             /*for(IndexItem link:childrenLinks) {
                 result += "<li>" + "<a href=http://localhost:2407/" + link.url + "> a[href]" + link.url + "</a>" + "</li>";
                 result += formatList(link.childrenLinks);
             }*/
             if(!this.childrenLinks.isEmpty())
                 result+=formatList(childrenLinks);
-            result +="</ul>"
-                    +"<li>"+this.metadata+"</li></ul>";
+            result +="</ul>";
+
 
             return result;
         }
@@ -276,15 +278,15 @@ class HttpRequestThread implements Runnable {
                 for(IndexItem childItem : childList) {
                    // System.out.println(childItem.childrenLinks+"\n\n");
                     res+="<li>" + "<a href=http://localhost:2407/" + childItem.url + "> a[href]" + childItem.url + "</a>" + "</li>";
-                    if(childItem.childrenLinks != null)
-                       res += formatList(childItem.childrenLinks);
+                   // if(childItem.childrenLinks != null)
+                    res += formatList(childItem.childrenLinks);
                 }
             //System.out.println(res);
             res +="</ul>";
             return res;
         }
         public String toString(){
-            return "url: "+this.url +" empty: "+this.childrenLinks;
+            return "url: "+this.url +" links: "+this.childrenLinks+"\n";
         }
     }
 }

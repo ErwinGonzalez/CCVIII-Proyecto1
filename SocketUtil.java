@@ -40,7 +40,8 @@ class SocketUtil {
         System.out.println(responseCode);
         if (responseCode == 301 || responseCode == 302)
             getForwardAddress();
-
+        if(responseCode >= 400 && responseCode<500)
+            return;
     }
 
     public String readOneLine() throws IOException {
@@ -105,6 +106,7 @@ class SocketUtil {
             sendGet(requestLine[1]);
         else{
             System.out.println("Max retries reached, exiting");
+            retries =3;
             return;}
 
       
