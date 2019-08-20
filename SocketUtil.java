@@ -22,6 +22,7 @@ class SocketUtil {
     int port;
     static int retries = 3;
 
+    //TODO, cambiar a sockets ssl, asi se evitan muchas paginas con errores
     public SocketUtil(String url, int port) throws IOException {
         this.port = port;
         resetSocket(url, port);
