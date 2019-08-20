@@ -35,7 +35,12 @@ public class htmlOnClickTesting implements Runnable{
 
             "var x = document.getElementById(cName);\n" +
             "x.classList.remove(\"hidden\");" +
-            "x.classList.add(\"shown\");}" +
+            "x.classList.add(\"shown\");};\n" +
+
+            "function hideChildrenList(id){" +
+            "var cName = id+\"_list\";\n" +
+            "var z = document.getElementById(cName);\n" +
+            "z.classList.toggle(\"hidden\");}" +
             "</script>";
 
 
@@ -51,11 +56,15 @@ public class htmlOnClickTesting implements Runnable{
     }
 
     public String readAllUrls(UrlItem rootItem){
-        String returnString  = "<ul>";
+        String returnString  = "";
         returnString += "<li>"+"<a href=javascript:testFunction(\""+rootItem.url+"\");>View HTML</a>" +
+                "<a href=javascript:hideChildrenList(\""+rootItem.url+"\");>[toggle children]</a>" +
                 "<a href=\"http://www.google.com\" target=\"_blank\">"+rootItem.url+"</a></li>";
+        returnString+="<ul id = \"" +
+                rootItem.url +
+                "_list\">";
         for (UrlItem childItem : rootItem.childUrls){
-            //returnString+="<ul><li>"+childItem.url+"</li>";
+
             returnString += readAllUrls(childItem);
             //returnString+="</ul>";
         }
@@ -80,7 +89,7 @@ public class htmlOnClickTesting implements Runnable{
 
         String content = "<html>"+
                 "<head>"+style+script+"</head>"+
-                "<body><table style=\"width:100%\"><tr><th class = \"col1\">Urls</th><th class=\"col2\">html</th></tr></tr><td>"+readAllUrls(root)+"</td>"+"<td>"+readAllHtml(root)+"</td></tr></table>"+
+                "<body><table style=\"width:100%\"><tr><th class = \"col1\">Urls</th><th class=\"col2\">html</th></tr></tr><td><ul>"+readAllUrls(root)+"</ul></td>"+"<td>"+readAllHtml(root)+"</td></tr></table>"+
 
                 "</body></html>";
         String htmlResponse = "HTTP/1.1 200 OK\n"+
