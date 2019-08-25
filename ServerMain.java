@@ -30,12 +30,12 @@ class ServerMain {
             System.err.println("Error in configuration file");
         }
 
-        ThreadPoolExecutor tpe = (ThreadPoolExecutor) Executors.newFixedThreadPool(maxThreadsNumber);
+        ThreadPoolExecutor tpe = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
         try {
             while (true) {
                 //se llama a esta pagina como http://localhost:2407/${url}
-                tpe.submit(new htmlOnClickTesting(serverSocket.accept()));
+                tpe.submit(new HttpRequestThread(serverSocket.accept()));
             }
         }finally {
             readFile.close();

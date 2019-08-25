@@ -95,7 +95,7 @@ public class htmlOnClickTesting implements Runnable{
         String htmlResponse = "HTTP/1.1 200 OK\n"+
                                "Content-Type: text/html\n" ;
 
-        System.out.println(htmlResponse);
+        //System.out.println(htmlResponse);
         htmlResponse+="Content-Lenght: "+content.length()+
                     "\r\n\r\n";
         htmlResponse+=content;

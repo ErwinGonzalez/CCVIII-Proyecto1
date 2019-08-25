@@ -36,7 +36,33 @@ class HttpRequestThread implements Runnable {
         puede agregar un panel para la metadata y otro panel para el detalle de los enlaces
         posiblemente una tabla
      */
-    private static String returnString = "<html><body>";
+    private static final String style = "<style>\n.hidden{\ndisplay : none;}\n" +
+            ".shown{\nbackground-color : #9E9E9E;}\n" +
+            ".col1{width : 60%;}\n" +
+            ".col2{width : 40%;}  </style>";
+    private static final String script = "<script type= \"text/javascript\"\n>"+
+            "function testFunction(url){" +
+            "var cName = url+\"_html\";\n"+
+
+            "var y = document.getElementsByClassName(\"shown\");"+
+            "var i;"+
+            "for(i = 0; i<y.length;i++){" +
+            "y[i].classList.add(\"hidden\");" +
+            "y[i].classList.remove(\"shown\");}" +
+
+            "var x = document.getElementById(cName);\n" +
+            "x.classList.remove(\"hidden\");" +
+            "x.classList.add(\"shown\");};\n" +
+
+            "function hideChildrenList(id){" +
+            "var cName = id+\"_list\";\n" +
+            "var z = document.getElementById(cName);\n" +
+            "z.classList.toggle(\"hidden\");}" +
+            "</script>";
+
+    private static String returnString = "<html><head>"+style+script+"</head><body>" +
+            "<div style=\"overflow-x:auto;\"><table style=\"width:100%\">" +
+            "<tr><th class = \"col1\">Urls</th><th class=\"col2\">html</th></tr></tr><td>";
     private static String ogRequest = "",ogDomain ="";
     private final static int   PORT_MAX_NUMBER = 100;
     private static boolean[] portList = new boolean[PORT_MAX_NUMBER];
@@ -56,8 +82,9 @@ class HttpRequestThread implements Runnable {
         try {
             this.serverRequest = serverConnection;
             this.reader = new BufferedReader(new InputStreamReader(serverRequest.getInputStream()));
-            this.output = new DataOutputStream(serverRequest.getOutputStream());
+            //this.output = new DataOutputStream(serverRequest.getOutputStream());
         } catch (IOException e) {
+            System.out.println();
             e.printStackTrace();
         }
     }
@@ -77,7 +104,7 @@ class HttpRequestThread implements Runnable {
                 ogDomain = ogRequest.substring(0,ogRequest.contains("/")?ogRequest.indexOf("/"):ogRequest.length());
 
             }
-            checkForOpenPorts(ogRequest);
+            //checkForOpenPorts(ogRequest);
             returnString += "<h1>";
             for(int i = 0;i<PORT_MAX_NUMBER;i++)
                 if(portList[i])
@@ -167,8 +194,7 @@ class HttpRequestThread implements Runnable {
         *  el siguiente paso seria de armar los enlaces*/
         /**Port Searching starts here
         * */
-        int portNumber = 78;
-        int portMaxNumber = 83;
+
         addUrlToList(url);
         String urlString = removeHttpFromUrl(url);
 
@@ -193,7 +219,8 @@ class HttpRequestThread implements Runnable {
 
         /** Port Searching end Here
         * */
-        int firstOpenPort = getFirstOpenPort();
+        //int firstOpenPort = getFirstOpenPort();
+        int firstOpenPort = 80;
         if(firstOpenPort < 0)
             firstOpenPort = 80;
         /**Starts socket and gets page from port obtained before*/
@@ -217,11 +244,16 @@ class HttpRequestThread implements Runnable {
         Document doc = Jsoup.parse(htmlRead);
         Elements alinks = doc.select("a");
         //TODO button might need to display text or smthng
-        Elements lLinks = doc.select("link");
+        Elements lLinks = doc.select("link:not([rel=shortlink] " +
+                                                ", [rel=alternate]" +
+                                                ", [rel=amphtml]" +
+                                                ", [rel=attachment]" +
+                                                ", [rel=canonical]" +
+                                                ", [rel=stylesheet])");
         //Elements btnlinks = doc.getElementsByTag("button");
         //Elements formlinks = doc.getElementsByTag("action");
         //starts html response
-        //alinks.addAll(lLinks);
+        alinks.addAll(lLinks);
         //System.out.println(urlString +"\n"+ (alinks.size() > 0 )+"\n");
 
         /**Get links and other stuff, add them to the list*/
@@ -248,6 +280,9 @@ class HttpRequestThread implements Runnable {
                     && !currLink.endsWith(".ico")
                     && !currLink.endsWith(".jpg")
                     && !currLink.endsWith(".png")
+                    && !currLink.endsWith(".json")
+                    && !currLink.endsWith(".pdf")
+                    && !currLink.endsWith("json/")
                     && !currLink.contains("twitter")
                     && !currLink.contains("oembed"))
                 searchLinks.add(new IndexItem(currLink, htmlRead,new ArrayList<>(),allLinks));
@@ -273,7 +308,7 @@ class HttpRequestThread implements Runnable {
        // System.out.println(receivedItem);
        // System.out.println(list.toString());
 
-        if((depth++)<5) {
+        if((depth++)<2) {
             for (IndexItem childLink : searchLinks) {
                 try {
                     System.out.println(childLink.url);
@@ -285,50 +320,26 @@ class HttpRequestThread implements Runnable {
             }
         }
 
-        if(url.equals(ogRequest))
-            depth = 0;
 
         //Closes html response code
-        if(depth == 0) {
-            returnString += receivedItem.formattedHTML() + "</body></html>";
+        if(url.equals(ogRequest)) {
+            returnString += receivedItem.formattedHTML() + "</td>" +
+                    "<td>"+readAllHtml(receivedItem)+"</td>"+
+                    "</table></div></body></html>";
             //System.out.println(returnString);
             String headerResponse = "HTTP/1.1 200 OK" + "Server : TestServer\n" + "Date: "
                     + format.format(new Date(System.currentTimeMillis())) + "\n" + "Content-Type: text/html" + "\n"
                     + "Connection: keep-alive\n" + "Content-Length: " + returnString.length() + "\r\n\r\n";
 
+            this.output = new DataOutputStream(serverRequest.getOutputStream());
             output.writeBytes(headerResponse);
             output.writeBytes(returnString);
             //System.out.println(urlList);
-
+            output.close();
+            this.serverRequest.close();
         }
-        /**
-         * Ciclo de lectura del input de la pagina, hay que mejorarlo posiblemente seria
-         * buena idea guardar este resultado en un archivo (ej. temp.txt) para tener
-         * donde leer/manipular el resultado
-         */
 
-        /**
-         * Una vez que se tenga el resultado, hay que usar jsoup para crear una lista de
-         * tags leer por bloques para poder dar forma al arbol ej. for(getAllh1)
-         * getAllahref ... asi, leyendo por tablas/clases, etc aqui mismo, podemos
-         * aprovechar a leer la metadata de cada elemento (direccion del salto, nombres
-         * de clases, descripciones, etc) eso lo guardamos en una lista, posiblemente un
-         * mapa o un hash para poder referenciar de vuelta con la clase
-         */
 
-        /**
-         * Esta lista, hay que revisar los contenidos, viendo que ,por ejemplo el index,
-         * solo deberia salir una vez en el arbol, aun si hay varios saltos al index
-         */
-
-        /**
-         * Luego se deberia crear un html de respuesta dos columnas, la columna
-         * izquierda tendria dos filas
-         ***********************************
-         * * * * * Arbol * Pagina Web * * * ************************ * Metadata *
-         ***********************************
-         */
-        return;
     }
     private boolean addUrlToList(String url){
         if(!urlList.contains(url)) {
@@ -351,33 +362,48 @@ class HttpRequestThread implements Runnable {
         }
         public String formattedHTML(){
             String result =  "<ul>"+
-                    "<li>"+this.url+"</li>";
+                    "<li>"+"<a href=javascript:testFunction(\""+this.url+"\");>View HTML</a>" +
+                    "<a href=javascript:hideChildrenList(\""+this.url+"\");>[toggle children]</a>" +
+                    "<a href=\"http://www.google.com\" target=\"_blank\">"+this.url+"</a></li>";
             /*for(IndexItem link:childrenLinks) {
                 result += "<li>" + "<a href=http://localhost:2407/" + link.url + "> a[href]" + link.url + "</a>" + "</li>";
                 result += formatList(link.childrenLinks);
             }*/
-            if(!this.childrenLinks.isEmpty())
-                result+=formatList(childrenLinks);
+            if(!this.childrenLinks.isEmpty()) {
+                result += "<ul id="+this.url+ "_list>"+formatList(childrenLinks)+"</ul>";
+            }
             result +="</ul>";
 
 
             return result;
         }
         public String formatList(ArrayList<IndexItem> childList ){
-            String res = "<ul>";
+            String res = "";
 
                 for(IndexItem childItem : childList) {
                    // System.out.println(childItem.childrenLinks+"\n\n");
-                    res+="<li>" + "<a href=http://localhost:2407/" + childItem.url + "> a[href]" + childItem.url + "</a>" + "</li>";
-                   // if(childItem.childrenLinks != null)
-                    res += formatList(childItem.childrenLinks);
+                    res+="<li>"+"<a href=javascript:testFunction(\""+childItem.url+"\");>View HTML</a>";
+                    if(!childItem.childrenLinks.isEmpty())
+                            res+= "<a href=javascript:hideChildrenList(\""+childItem.url+"\");>[toggle children]</a>";
+                    res+="<a href=\"http://www.google.com\" target=\"_blank\">"+childItem.url+"</a>";
+                    if(!childItem.childrenLinks.isEmpty()) {
+
+                        res +="<ul id="+childItem.url+ "_list>"+ formatList(childItem.childrenLinks)+"</ul></li>";
+                    }
                 }
             //System.out.println(res);
-            res +="</ul>";
             return res;
         }
         public String toString(){
             return "url: "+this.url +" links: "+this.childrenLinks+"\n";
         }
+
+    }
+    public String readAllHtml(
+            IndexItem rootItem){
+        String returnString  = "<div id="+rootItem.url+"_html class=\"hidden\">"+rootItem.url+"<br>"+rootItem.html.replace("<", "&lt;").replace(">", "&gt;")+"</div>";
+        for(IndexItem child: rootItem.childrenLinks)
+            returnString += readAllHtml(child);
+        return returnString;
     }
 }
