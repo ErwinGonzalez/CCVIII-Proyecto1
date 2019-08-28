@@ -11,7 +11,20 @@ import java.util.*;
 public class HTMLCompare {
     public static ArrayList<PageHTML> pages = new ArrayList<>();
 
+    public HTMLCompare(){
+
+    }
     public HTMLCompare(String baseHTML){
+        pages.add(new PageHTML(baseHTML));
+    }
+    public boolean foundEquals(PageHTML page){
+
+        for(PageHTML pageHTML : pages)
+            if(pageHTML.isEqual(page))
+                return true;
+
+        pages.add(page);
+        return false;
 
     }
     public static void main(String[] args){
@@ -49,7 +62,10 @@ public class HTMLCompare {
                 //System.out.println(test);
             }
             htmlResponse  = page.toString();
-            Elements elements = page.select("a[href],link:not([rel=shortlink] " + ", [rel=alternate]" + ", [rel=amphtml]"
+            Elements elements = page.select("a[href]");
+            for(Element element : elements)
+                links.add(element.toString());
+            elements = page.select("a[href],link:not([rel=shortlink] " + ", [rel=alternate]" + ", [rel=amphtml]"
                     + ", [rel=attachment]" + ", [rel=canonical]" + ", [rel=stylesheet])");
             for(Element element : elements)
                 links.add(element.toString());

@@ -32,6 +32,7 @@ class SocketUtil {
         this.domain = getDomain(url);
         this.page = getSite(url);
         //System.out.println("domain "+domain+"site "+page);
+
         String message = "GET " + page + " HTTP/1.1\r\n" + "Host: " + domain + "\r\n" + "Accept: */*\r\n"
                 + "Connection: keep-alive\r\n" + "User-Agent: Mozilla/5.0\r\n";
         socketOutputStream.println(message);

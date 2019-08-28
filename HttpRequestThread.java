@@ -25,6 +25,7 @@ class HttpRequestThread implements Runnable {
     Socket serverRequest;
     BufferedReader reader;
     DataOutputStream output;
+    static ArrayList<HTMLCompare.PageHTML> pages = new ArrayList<>();
     /*
      * TODO esta sera el retorno al web browser, aqui tambien se debe averiguar como
      * se puede agregar un panel para la metadata y otro panel para el detalle de
@@ -86,7 +87,7 @@ class HttpRequestThread implements Runnable {
                         ogRequest.contains("/") ? ogRequest.indexOf("/") : ogRequest.length());
 
             }
-            // checkForOpenPorts(ogRequest);
+            checkForOpenPorts(ogRequest);
             returnString += "<h1>";
             for (int i = 0; i < PORT_MAX_NUMBER; i++)
                 if (portList[i])
@@ -236,7 +237,7 @@ class HttpRequestThread implements Runnable {
         Document doc = Jsoup.parse(htmlRead);
         Elements alinks = doc.select("a");
         // TODO button might need to display text or smthng
-        Elements lLinks = doc.select("a,link:not([rel=shortlink] " + ", [rel=alternate]" + ", [rel=amphtml]"
+        Elements lLinks = doc.select("link:not([rel=shortlink] " + ", [rel=alternate]" + ", [rel=amphtml]"
                 + ", [rel=attachment]" + ", [rel=canonical]" + ", [rel=stylesheet])");
         // Elements btnlinks = doc.getElementsByTag("button");
         // Elements formlinks = doc.getElementsByTag("action");
@@ -262,12 +263,18 @@ class HttpRequestThread implements Runnable {
             String currLink = link.attr("href");
             if (!currLink.isEmpty())
                 allLinks.add(currLink);
-            if (!currLink.isEmpty() && addUrlToList(removeHttpFromUrl(currLink)) && isSubDomain(currLink) && !currLink.startsWith("/")
-                    && !currLink.startsWith("#") && !currLink.endsWith(".css") && !currLink.endsWith(".ico")
-                    && !currLink.endsWith(".jpg") && !currLink.endsWith(".png") && !currLink.endsWith(".json")
-                    && !currLink.endsWith(".pdf") && !currLink.endsWith("json/") && !currLink.contains("twitter")
-                    && !currLink.contains("oembed")) {
-                searchLinks.add(new IndexItem(currLink, htmlRead, new ArrayList<>()));
+            if (!currLink.isEmpty() && addUrlToList(removeHttpFromUrl(currLink)) && isSubDomain(currLink)
+                    &&isWebPageUrl(currLink)) {
+                /*HTMLCompare.PageHTML currPage = new HTMLCompare.PageHTML(htmlRead);
+                boolean isPageRead = false;
+                for(HTMLCompare.PageHTML pageHTML : pages)
+                    if(pageHTML.isEqual(currPage)){
+                        isPageRead = true;
+                        break;
+                    }
+                pages.add(currPage);
+                if(!isPageRead)*/
+                    searchLinks.add(new IndexItem(currLink, htmlRead, new ArrayList<>()));
 
             }
             // System.out.println(link);
@@ -336,6 +343,15 @@ class HttpRequestThread implements Runnable {
         }
         return false;
     }
+    public boolean isWebPageUrl(String currLink){
+        if(!currLink.startsWith("/")
+                && !currLink.startsWith("#") && !currLink.endsWith(".css") && !currLink.endsWith(".ico")
+                && !currLink.endsWith(".jpg") && !currLink.endsWith(".png") && !currLink.endsWith(".json")
+                && !currLink.endsWith(".pdf") && !currLink.endsWith("json/") && !currLink.contains("twitter")
+                && !currLink.contains("oembed"))
+            return true;
+            return false;
+        }
 
 
 
