@@ -236,7 +236,7 @@ class HttpRequestThread implements Runnable {
         Document doc = Jsoup.parse(htmlRead);
         Elements alinks = doc.select("a");
         // TODO button might need to display text or smthng
-        Elements lLinks = doc.select("link:not([rel=shortlink] " + ", [rel=alternate]" + ", [rel=amphtml]"
+        Elements lLinks = doc.select("a,link:not([rel=shortlink] " + ", [rel=alternate]" + ", [rel=amphtml]"
                 + ", [rel=attachment]" + ", [rel=canonical]" + ", [rel=stylesheet])");
         // Elements btnlinks = doc.getElementsByTag("button");
         // Elements formlinks = doc.getElementsByTag("action");
