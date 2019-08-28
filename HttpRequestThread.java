@@ -128,7 +128,8 @@ class HttpRequestThread implements Runnable {
         ThreadPoolExecutor executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(100);
         List<Callable<boolean[]>> taskList = new ArrayList<>();
 
-        for (int i = 0; i < 100; i = i + 10) {
+        for (int i = 0; i < 1000; i = i + 10) {
+        //if(i > 65000) i = 65535;
             taskList.add(new PortCheckingThread(removeHttpFromUrl(ogRequest), i, i + 9));
         }
         try {
@@ -211,8 +212,7 @@ class HttpRequestThread implements Runnable {
         /**
          * Port Searching end Here
          */
-        // int firstOpenPort = getFirstOpenPort();
-        int firstOpenPort = 80;
+        int firstOpenPort = getFirstOpenPort();
         if (firstOpenPort < 0)
             firstOpenPort = 80;
         /** Starts socket and gets page from port obtained before */
@@ -268,7 +268,7 @@ class HttpRequestThread implements Runnable {
                 /*HTMLCompare.PageHTML currPage = new HTMLCompare.PageHTML(htmlRead);
                 boolean isPageRead = false;
                 for(HTMLCompare.PageHTML pageHTML : pages)
-                    if(pageHTML.isEqual(currPage)){
+                    if(currPage.isEqual(pageHTML)){
                         isPageRead = true;
                         break;
                     }
