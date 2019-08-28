@@ -265,6 +265,27 @@ class HttpRequestThread implements Runnable {
                 allLinks.add(currLink);
             if (!currLink.isEmpty() && addUrlToList(removeHttpFromUrl(currLink)) && isSubDomain(currLink)
                     &&isWebPageUrl(currLink)) {
+
+                ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+                String finalHtmlRead = htmlRead;
+                Callable<Boolean> checkHTML= new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() throws Exception {
+                        HTMLCompare.PageHTML currPage = new HTMLCompare.PageHTML(finalHtmlRead);
+                        boolean isPageRead = false;
+                        for(HTMLCompare.PageHTML pageHTML : pages)
+                            if(currPage.isEqual(pageHTML)){
+                                return true;
+                            }
+                        pages.add(currPage);
+                        return false;
+                    }
+                };
+
+                Future<Boolean> checkedPage = executorService.submit(checkHTML);
+
+
                 /*HTMLCompare.PageHTML currPage = new HTMLCompare.PageHTML(htmlRead);
                 boolean isPageRead = false;
                 for(HTMLCompare.PageHTML pageHTML : pages)
@@ -274,6 +295,7 @@ class HttpRequestThread implements Runnable {
                     }
                 pages.add(currPage);
                 if(!isPageRead)*/
+                if(checkedPage.get())
                     searchLinks.add(new IndexItem(currLink, htmlRead, new ArrayList<>()));
 
             }
