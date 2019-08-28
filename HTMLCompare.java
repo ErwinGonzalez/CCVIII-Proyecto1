@@ -6,10 +6,7 @@ import org.jsoup.select.Elements;
 import org.simmetrics.StringMetric;
 import org.simmetrics.metrics.StringMetrics;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class HTMLCompare {
     public static ArrayList<PageHTML> pages = new ArrayList<>();
@@ -24,7 +21,7 @@ public class HTMLCompare {
         pages.add(new PageHTML(dummyHtml1));
         PageHTML html2 = new PageHTML(dummyHtml2);
         for(PageHTML pageHTML : pages){
-            System.out.println(pageHTML.compareTo(html2));
+            System.out.println(pageHTML.isEqual(html2));
         }
     }
 
@@ -66,13 +63,26 @@ public class HTMLCompare {
             if(elements.size()>1)
                 metaKey = elements.first().toString();
         }
-        public boolean compareTo(PageHTML page){
-            StringMetric cosMetric = StringMetrics.cosineSimilarity();
-            StringMetric levMetric = StringMetrics.levenshtein();
-            if(cosMetric.compare(this.htmlResponse,page.htmlResponse) > 0.9
-                //&& levMetric.compare(this.htmlResponse, page.htmlResponse)>0.9
-            )
-                return true;
+        public boolean isEqual(PageHTML page){
+
+            if(this.links.size() == page.links.size() && this.scripts.size() == page.scripts.size()) {
+                Collections.sort(this.links);
+                Collections.sort(page.links);
+                Collections.sort(this.scripts);
+                Collections.sort(page.scripts);
+                if(this.links.equals(page.links) && this.scripts.equals(page.scripts)){
+                    if(this.htmlResponse.equals(page.htmlResponse))
+                        return true;
+                    else {
+                        StringMetric cosMetric = StringMetrics.cosineSimilarity();
+                        StringMetric levMetric = StringMetrics.levenshtein();
+                        if (cosMetric.compare(this.htmlResponse, page.htmlResponse) > 0.9
+                            //&& levMetric.compare(this.htmlResponse, page.htmlResponse)>0.9
+                        )
+                            return true;
+                    }
+                }
+            }
             return false;
         }
     }
